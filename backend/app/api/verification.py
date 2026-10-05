@@ -87,11 +87,13 @@ def serialize_value(
         value,
         dict,
     ):
-
-        return {
+        res = {
             key: serialize_value(item)
             for key, item in value.items()
         }
+        if "_id" in res and "id" not in res:
+            res["id"] = res["_id"]
+        return res
 
     if isinstance(
         value,

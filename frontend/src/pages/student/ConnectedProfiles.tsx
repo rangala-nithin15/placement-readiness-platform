@@ -300,6 +300,9 @@ export default function ConnectedProfiles() {
       case "hackerrank":
         return "HackerRank";
 
+      case "linkedin":
+        return "LinkedIn";
+
       default:
         return value;
     }
@@ -454,6 +457,18 @@ export default function ConnectedProfiles() {
                     GitHub
                   </option>
 
+                  <option value="codechef">
+                    CodeChef
+                  </option>
+
+                  <option value="hackerrank">
+                    HackerRank
+                  </option>
+
+                  <option value="linkedin">
+                    LinkedIn
+                  </option>
+
                 </select>
 
               </div>
@@ -485,6 +500,12 @@ export default function ConnectedProfiles() {
                   placeholder={
                     platform === "github"
                       ? "https://github.com/your-username"
+                      : platform === "codechef"
+                      ? "https://www.codechef.com/users/your-username"
+                      : platform === "hackerrank"
+                      ? "https://www.hackerrank.com/profile/your-username"
+                      : platform === "linkedin"
+                      ? "https://www.linkedin.com/in/your-username"
                       : "https://leetcode.com/u/your-username/"
                   }
                   className="w-full border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-900"

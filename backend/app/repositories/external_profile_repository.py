@@ -194,6 +194,8 @@ def update_external_profile_stats(
     student_id,
     profile_id,
     stats: dict,
+    api_available: bool = True,
+    note=None,
 ):
 
     collection = get_profiles_collection()
@@ -215,21 +217,6 @@ def update_external_profile_stats(
         or "PENDING"
     )
 
-    # --------------------------------------------------------
-    # IMPORTANT VERIFICATION RULE
-    #
-    # Fetching public LeetCode/GitHub information does NOT
-    # prove that the student owns the account.
-    #
-    # Therefore:
-    #
-    # PENDING  -> remains PENDING
-    # REJECTED -> remains REJECTED
-    # VERIFIED -> remains VERIFIED
-    #
-    # Only the verification workflow can change the status.
-    # --------------------------------------------------------
-
     if current_status not in {
         "PENDING",
         "REJECTED",
@@ -239,21 +226,21 @@ def update_external_profile_stats(
 
     now = datetime.utcnow()
 
+    update_payload = {
+        "stats": stats or {},
+        "api_available": api_available,
+        "note": note,
+        "verification_status": current_status,
+        "updated_at": now,
+    }
+
     collection.update_one(
         {
             "_id": profile_id,
             "student_id": student_id,
         },
         {
-            "$set": {
-                "stats": stats or {},
-
-                "verification_status": (
-                    current_status
-                ),
-
-                "updated_at": now,
-            }
+            "$set": update_payload
         },
     )
 
