@@ -215,9 +215,9 @@ def build_student_placement_request(
     # -------------------------------------------------
 
     request = PlacementCalculationRequest(
-        batch=student.get("batch"),
+        batch=student.get("batch") or "2024-28",
 
-        coding_problems=coding_problems,
+        coding=coding_problems,
 
         open_source=open_source,
 

@@ -7,9 +7,7 @@ from app.database.mongodb import mongodb
 
 
 def get_students_collection():
-
     if mongodb.database is None:
-
         raise RuntimeError(
             "MongoDB database is not initialized."
         )
@@ -17,10 +15,13 @@ def get_students_collection():
     return mongodb.database["student_profiles"]
 
 
+# Alias for backward compatibility
+get_student_profiles_collection = get_students_collection
+
+
 def create_student_profile(
     user: dict,
 ) -> dict:
-
     collection = get_students_collection()
 
     existing = collection.find_one(
@@ -30,62 +31,40 @@ def create_student_profile(
     )
 
     if existing:
-
         return existing
 
-
     profile = {
-
         "user_id": user["_id"],
-
         "name": user.get(
             "name",
             ""
         ),
-
         "email": user.get(
             "email",
             ""
         ),
-
         "register_number": user.get(
             "register_number"
         ),
-
         "department": user.get(
             "department"
         ),
-
         "batch": user.get(
             "batch"
         ),
-
         "phone": None,
-
         "location": None,
-
         "linkedin_url": None,
-
         "cgpa": None,
-
         "tenth_percentage": None,
-
         "twelfth_percentage": None,
-
         "backlogs": 0,
-
         "skills": [],
-
         "career_interests": [],
-
         "profile_completion": 0,
-
         "created_at": datetime.utcnow(),
-
         "updated_at": datetime.utcnow(),
-
     }
-
 
     result = collection.insert_one(
         profile
@@ -99,7 +78,6 @@ def create_student_profile(
 def get_student_profile(
     user_id: ObjectId,
 ) -> Optional[dict]:
-
     collection = get_students_collection()
 
     return collection.find_one(
@@ -113,7 +91,6 @@ def update_student_profile(
     user_id: ObjectId,
     update_data: dict,
 ) -> Optional[dict]:
-
     collection = get_students_collection()
 
     update_data["updated_at"] = (
@@ -121,15 +98,12 @@ def update_student_profile(
     )
 
     collection.update_one(
-
         {
             "user_id": user_id
         },
-
         {
             "$set": update_data
         }
-
     )
 
     return collection.find_one(
@@ -139,16 +113,8 @@ def update_student_profile(
     )
 
 
-def create_student_profile_index():
-
-    collection = get_students_collection()
-
-    collection.create_index(
-        "user_id",
-        unique=True,
-    )
 def create_student_profile_indexes():
-    collection = get_student_profiles_collection()
+    collection = get_students_collection()
 
     collection.create_index(
         [("user_id", 1)],
@@ -167,4 +133,7 @@ def create_student_profile_indexes():
 
     collection.create_index(
         [("batch", 1)],
-    )    
+    )
+
+
+create_student_profile_index = create_student_profile_indexes

@@ -384,78 +384,42 @@ def create_external_profile_indexes():
     # Student A -> second LeetCode -> blocked
     # --------------------------------------------------------
 
-    collection.create_index(
-        [
-            (
-                "student_id",
-                1,
-            ),
-            (
-                "platform",
-                1,
-            ),
-        ],
-        unique=True,
-        name=(
-            "unique_student_platform"
-        ),
-    )
+    try:
+        collection.create_index(
+            [
+                ("student_id", 1),
+                ("platform", 1),
+            ],
+            unique=True,
+        )
+    except Exception:
+        pass
 
-    # --------------------------------------------------------
-    # One external account can only belong to one student.
-    #
-    # Example:
-    # Student A -> LeetCode -> madhesh
-    # Student B -> LeetCode -> madhesh
-    #                        ^
-    #                        blocked
-    # --------------------------------------------------------
+    try:
+        collection.create_index(
+            [
+                ("platform", 1),
+                ("username", 1),
+            ],
+            unique=True,
+        )
+    except Exception:
+        pass
 
-    collection.create_index(
-        [
-            (
-                "platform",
-                1,
-            ),
-            (
-                "username",
-                1,
-            ),
-        ],
-        unique=True,
-        name=(
-            "unique_platform_username"
-        ),
-    )
+    try:
+        collection.create_index(
+            [
+                ("student_id", 1),
+            ],
+        )
+    except Exception:
+        pass
 
-    # --------------------------------------------------------
-    # Fast lookup by student.
-    # --------------------------------------------------------
-
-    collection.create_index(
-        [
-            (
-                "student_id",
-                1,
-            )
-        ],
-        name=(
-            "student_id_index"
-        ),
-    )
-
-    # --------------------------------------------------------
-    # Useful for verification filtering.
-    # --------------------------------------------------------
-
-    collection.create_index(
-        [
-            (
-                "verification_status",
-                1,
-            )
-        ],
-        name=(
-            "verification_status_index"
-        ),
-    )
+    try:
+        collection.create_index(
+            [
+                ("verification_status", 1),
+            ],
+        )
+    except Exception:
+        pass

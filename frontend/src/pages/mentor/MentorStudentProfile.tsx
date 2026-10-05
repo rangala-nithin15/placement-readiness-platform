@@ -548,6 +548,10 @@ export default function MentorStudentProfile() {
                 {student.batch ||
                   "Batch"}
 
+                {" • "}
+
+                {`Profile: ${profileCompletion}%`}
+
               </p>
 
             </div>

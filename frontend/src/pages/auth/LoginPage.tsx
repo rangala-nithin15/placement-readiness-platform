@@ -5,7 +5,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import {
   Link,
   useNavigate,

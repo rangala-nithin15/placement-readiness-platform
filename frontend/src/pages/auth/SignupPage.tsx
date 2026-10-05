@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import {
-  FormEvent,
+  type FormEvent,
   useState,
 } from "react";
 
