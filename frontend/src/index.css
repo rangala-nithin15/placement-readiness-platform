@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   font-family:
     Inter,
@@ -14,6 +16,17 @@
   background: #f6f8fb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+.dark {
+  color-scheme: dark;
+  color: #f1f5f9;
+  background: #0f172a;
+}
+
+.dark body {
+  background: #0f172a;
+  color: #f1f5f9;
 }
 
 * {

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ThemeToggle from "../../components/common/ThemeToggle";
 import { apiRequest } from "../../services/api";
 import { clearAuth, getStoredUser, getToken } from "../../services/authStorage";
 
@@ -204,27 +205,28 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors">
       {/* HEADER */}
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white font-bold">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 dark:bg-slate-800 text-white font-bold">
               <Shield size={20} />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900">Administration Console</h1>
-              <p className="text-xs text-slate-500">Placement Readiness Platform</p>
+              <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Administration Console</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Placement Readiness Platform</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-700">
-              {user?.name || user?.email} <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 font-semibold">ADMIN</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {user?.name || user?.email} <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-300 font-semibold">ADMIN</span>
             </span>
+            <ThemeToggle />
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-red-600"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-red-600 dark:hover:text-red-400 transition-colors"
             >
               <LogOut size={14} />
               Logout
@@ -237,7 +239,7 @@ export default function AdminDashboard() {
           <button
             onClick={() => setActiveTab("overview")}
             className={`border-b-2 py-3 text-sm font-medium ${
-              activeTab === "overview" ? "border-slate-900 text-slate-900 font-semibold" : "border-transparent text-slate-500 hover:text-slate-800"
+              activeTab === "overview" ? "border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold" : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
             Overview
@@ -245,7 +247,7 @@ export default function AdminDashboard() {
           <button
             onClick={() => setActiveTab("mentors")}
             className={`border-b-2 py-3 text-sm font-medium ${
-              activeTab === "mentors" ? "border-slate-900 text-slate-900 font-semibold" : "border-transparent text-slate-500 hover:text-slate-800"
+              activeTab === "mentors" ? "border-slate-900 dark:border-slate-100 text-slate-900 dark:text-slate-100 font-semibold" : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
             Mentors ({mentors.length})

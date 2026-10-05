@@ -13,6 +13,7 @@ import {
 
 import { login } from "../../services/authService";
 import { saveAuth } from "../../services/authStorage";
+import ThemeToggle from "../../components/common/ThemeToggle";
 
 
 export default function LoginPage() {
@@ -144,7 +145,10 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="relative min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors">
+      <div className="absolute right-5 top-5 z-20">
+        <ThemeToggle />
+      </div>
 
       <div className="grid min-h-screen lg:grid-cols-2">
 
@@ -224,15 +228,15 @@ export default function LoginPage() {
             </div>
 
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm sm:p-8">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-sm sm:p-8">
 
               <div className="mb-7">
 
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                   Welcome back
                 </h2>
 
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   Sign in to continue to your
                   placement portal.
                 </p>

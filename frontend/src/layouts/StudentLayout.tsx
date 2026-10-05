@@ -21,6 +21,8 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import ThemeToggle from "../components/common/ThemeToggle";
+
 import {
   clearAuth,
   getStoredUser,
@@ -53,7 +55,7 @@ export default function StudentLayout() {
 
   return (
 
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors">
 
 
       {/* MOBILE OVERLAY */}
@@ -76,6 +78,7 @@ export default function StudentLayout() {
         className={`
           fixed inset-y-0 left-0 z-40 w-64
           border-r border-slate-200 bg-white
+          dark:border-slate-800 dark:bg-slate-900
           transition-transform duration-200
           lg:translate-x-0
           ${
@@ -88,11 +91,11 @@ export default function StudentLayout() {
 
         {/* SIDEBAR HEADER */}
 
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
+        <div className="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-800 px-5">
 
           <div>
 
-            <p className="text-sm font-bold text-slate-900">
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
               Placement
             </p>
 
@@ -107,7 +110,7 @@ export default function StudentLayout() {
             onClick={() =>
               setSidebarOpen(false)
             }
-            className="text-slate-500 lg:hidden"
+            className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 lg:hidden"
           >
 
             <X size={19} />
@@ -251,11 +254,11 @@ export default function StudentLayout() {
 
         {/* SIGN OUT */}
 
-        <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 p-3">
+        <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 dark:border-slate-800 p-3">
 
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
           >
 
             <LogOut size={18} />
@@ -276,7 +279,7 @@ export default function StudentLayout() {
 
         {/* HEADER */}
 
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-900/95 px-4 backdrop-blur sm:px-6">
 
 
           {/* MOBILE MENU */}
@@ -285,7 +288,7 @@ export default function StudentLayout() {
             onClick={() =>
               setSidebarOpen(true)
             }
-            className="text-slate-600 lg:hidden"
+            className="text-slate-600 dark:text-slate-400 lg:hidden"
           >
 
             <Menu size={21} />
@@ -297,7 +300,7 @@ export default function StudentLayout() {
 
           <div className="hidden lg:block">
 
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
               Student Portal
             </p>
 
@@ -306,18 +309,22 @@ export default function StudentLayout() {
 
           {/* USER AREA */}
 
-          <div className="ml-auto flex items-center gap-4">
+          <div className="ml-auto flex items-center gap-3">
 
+            {/* THEME TOGGLE */}
+            <ThemeToggle />
 
             {/* NOTIFICATION */}
 
             <button
-              className="relative text-slate-500 hover:text-slate-900"
+              onClick={() => navigate("/student/notifications")}
+              className="relative text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Notifications"
             >
 
-              <Bell size={20} />
+              <Bell size={19} />
 
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" />
+              <span className="absolute 1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
 
             </button>
 
@@ -329,11 +336,11 @@ export default function StudentLayout() {
 
               <div className="hidden text-right sm:block">
 
-                <p className="text-sm font-semibold text-slate-800">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                   {user?.name || "Student"}
                 </p>
 
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
 
                   {user?.department || "Department"}
 
@@ -346,11 +353,11 @@ export default function StudentLayout() {
               </div>
 
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
 
                 <UserRound
                   size={19}
-                  className="text-slate-600"
+                  className="text-slate-600 dark:text-slate-300"
                 />
 
               </div>
@@ -410,9 +417,9 @@ function NavItem({
           return `
             mb-1 flex w-full items-center gap-3 rounded-lg
             px-3 py-2.5 text-sm font-medium
-            bg-slate-900
-            !text-white
-            transition
+            bg-slate-900 dark:bg-slate-100
+            !text-white dark:!text-slate-900
+            transition shadow-xs
           `;
 
         }
@@ -421,9 +428,9 @@ function NavItem({
         return `
           mb-1 flex w-full items-center gap-3 rounded-lg
           px-3 py-2.5 text-sm font-medium
-          text-slate-600
-          hover:bg-slate-50
-          hover:text-slate-900
+          text-slate-600 dark:text-slate-400
+          hover:bg-slate-100 dark:hover:bg-slate-800
+          hover:text-slate-900 dark:hover:text-slate-100
           transition
         `;
 
