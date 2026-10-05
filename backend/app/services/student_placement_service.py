@@ -31,15 +31,13 @@ from app.services.placement_engine import (
 )
 
 
-def get_github_profile(
+def get_profile_by_platform(
     external_profiles: list,
+    platform: str,
 ) -> Optional[dict]:
-
     for profile in external_profiles:
-
-        if profile.get("platform") == "github":
+        if profile.get("platform") == platform.lower():
             return profile
-
     return None
 
 
@@ -62,42 +60,47 @@ def build_student_placement_request(
         )
     )
 
-    github_profile = get_github_profile(
-        external_profiles
+    leetcode_profile = get_profile_by_platform(
+        external_profiles,
+        "leetcode",
+    )
+    leetcode_stats = (
+        leetcode_profile.get("stats", {})
+        if leetcode_profile else {}
     )
 
-    github_stats = {}
-
-    if github_profile is not None:
-        github_stats = github_profile.get(
-            "stats",
-            {}
-        )
+    github_profile = get_profile_by_platform(
+        external_profiles,
+        "github",
+    )
+    github_stats = (
+        github_profile.get("stats", {})
+        if github_profile else {}
+    )
 
     # -------------------------------------------------
     # PARAMETER 1
     # Coding Problems Solved
     # -------------------------------------------------
+    approved_problems = int(
+        leetcode_stats.get("problems_solved", 0) or 0
+    )
 
     coding_problems = CodingProblemsInput(
-        approved_problems=0,
+        approved_problems=approved_problems,
         sql_problems=0,
     )
 
     # -------------------------------------------------
     # PARAMETER 2
     # Open-Source Contribution
-    #
-    # GitHub information is now available here.
-    # Actual placement marks will be calculated only
-    # after the official Annexure rules are available.
     # -------------------------------------------------
+    merged_prs = int(
+        github_stats.get("merged_pull_requests", 0) or 0
+    )
 
     open_source = OpenSourceInput(
-        merged_prs=github_stats.get(
-            "merged_pull_requests",
-            0
-        ),
+        merged_prs=merged_prs,
         program_stage=0,
     )
 
