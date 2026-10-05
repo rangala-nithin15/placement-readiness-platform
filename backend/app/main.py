@@ -13,6 +13,7 @@ from app.api import (
     admin,
     tasks,
     notifications,
+    chat,
 )
 
 from app.repositories.user_repository import (
@@ -42,6 +43,10 @@ from app.repositories.task_repository import (
 
 from app.repositories.notification_repository import (
     create_notification_indexes,
+)
+
+from app.repositories.chat_repository import (
+    create_chat_indexes,
 )
 
 
@@ -109,6 +114,8 @@ def startup_event():
     create_task_indexes()
 
     create_notification_indexes()
+
+    create_chat_indexes()
 
     ensure_admin_user()
 
@@ -213,6 +220,16 @@ app.include_router(
 
 app.include_router(
     notifications.router,
+    prefix="/api",
+)
+
+
+# ------------------------------------------------------------
+# Chat (WhatsApp-Style Mentorship Group Chat)
+# ------------------------------------------------------------
+
+app.include_router(
+    chat.router,
     prefix="/api",
 )
 

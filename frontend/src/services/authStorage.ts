@@ -34,6 +34,8 @@ export function getToken(): string | null {
 
 }
 
+export const getStoredToken = getToken;
+
 
 export function getStoredUser(): User | null {
 
