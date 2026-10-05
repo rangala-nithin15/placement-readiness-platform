@@ -1,388 +1,404 @@
 import {
-  CheckCircle2,
-  Code2,
   ExternalLink,
   Link2,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
-
 import {
+  FormEvent,
   useEffect,
   useState,
 } from "react";
 
-
 import {
   connectExternalProfile,
+  deleteExternalProfile,
   getExternalProfiles,
   refreshExternalProfile,
-  type ExternalProfile,
+} from "../../services/externalProfileService";
+
+import type {
+  ExternalProfile,
 } from "../../services/externalProfileService";
 
 
-const platforms = [
-
-  {
-    value: "leetcode",
-    name: "LeetCode",
-    description:
-      "Connect your LeetCode profile.",
-    placeholder:
-      "https://leetcode.com/u/username",
-  },
-
-  {
-    value: "github",
-    name: "GitHub",
-    description:
-      "Connect your GitHub profile.",
-    placeholder:
-      "https://github.com/username",
-  },
-
-  {
-    value: "codechef",
-    name: "CodeChef",
-    description:
-      "Connect your CodeChef profile.",
-    placeholder:
-      "https://www.codechef.com/users/username",
-  },
-
-  {
-    value: "hackerrank",
-    name: "HackerRank",
-    description:
-      "Connect your HackerRank profile.",
-    placeholder:
-      "https://www.hackerrank.com/profile/username",
-  },
-
-];
-
+// ==================================================
+// MAIN COMPONENT
+// ==================================================
 
 export default function ConnectedProfiles() {
-
   const [profiles, setProfiles] =
     useState<ExternalProfile[]>([]);
-
-
-  const [platform, setPlatform] =
-    useState("github");
-
-
-  const [profileUrl, setProfileUrl] =
-    useState("");
-
 
   const [loading, setLoading] =
     useState(true);
 
-
   const [connecting, setConnecting] =
     useState(false);
-
 
   const [refreshingId, setRefreshingId] =
     useState<string | null>(null);
 
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null);
+
+  const [platform, setPlatform] =
+    useState("leetcode");
+
+  const [profileUrl, setProfileUrl] =
+    useState("");
 
   const [error, setError] =
     useState("");
-
 
   const [success, setSuccess] =
     useState("");
 
 
+  // ==================================================
+  // LOAD PROFILES
+  // ==================================================
+
   async function loadProfiles() {
-
     try {
-
       setLoading(true);
-
       setError("");
 
       const response =
         await getExternalProfiles();
 
       setProfiles(
-        response.profiles
+        Array.isArray(response.profiles)
+          ? response.profiles
+          : []
       );
 
     } catch (err) {
-
       setError(
-
         err instanceof Error
           ? err.message
           : "Failed to load connected profiles."
-
       );
-
     } finally {
-
       setLoading(false);
-
     }
-
   }
 
 
   useEffect(() => {
-
     loadProfiles();
-
   }, []);
 
 
-  async function handleConnect(
-    event: React.FormEvent
-  ) {
+  // ==================================================
+  // CONNECT PROFILE
+  // ==================================================
 
+  async function handleConnect(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     setError("");
-
     setSuccess("");
 
+    const trimmedUrl =
+      profileUrl.trim();
 
-    if (!profileUrl.trim()) {
-
+    if (!trimmedUrl) {
       setError(
-        "Please enter your profile URL."
+        `Please enter your ${getPlatformName(
+          platform
+        )} profile URL.`
       );
 
       return;
-
     }
 
-
     try {
-
       setConnecting(true);
 
-
-      const response =
+      const profile =
         await connectExternalProfile({
-
           platform,
-
-          profile_url:
-            profileUrl.trim(),
-
+          profile_url: trimmedUrl,
         });
 
+      setProfiles((current) => {
+        const alreadyExists =
+          current.some(
+            (item) =>
+              item.id === profile.id
+          );
 
-      setProfiles(
-        (current) => [
+        if (alreadyExists) {
+          return current;
+        }
 
+        return [
+          profile,
           ...current,
-
-          response,
-
-        ]
-      );
-
+        ];
+      });
 
       setProfileUrl("");
 
-
       setSuccess(
-        `${response.platform} profile connected successfully.`
+        `${getPlatformName(
+          platform
+        )} profile connected successfully.`
       );
-
 
     } catch (err) {
-
       setError(
-
         err instanceof Error
           ? err.message
-          : "Failed to connect profile."
-
+          : `Failed to connect ${getPlatformName(
+              platform
+            )} profile.`
       );
-
     } finally {
-
       setConnecting(false);
-
     }
-
   }
 
+
+  // ==================================================
+  // REFRESH PROFILE
+  // ==================================================
 
   async function handleRefresh(
     profileId: string
   ) {
-
     try {
-
-      setRefreshingId(
-        profileId
-      );
-
       setError("");
-
       setSuccess("");
 
+      setRefreshingId(profileId);
 
-      const response =
+      const updatedProfile =
         await refreshExternalProfile(
           profileId
         );
 
-
-      setProfiles(
-        (current) =>
-
-          current.map(
-            (profile) =>
-
-              profile.id === profileId
-                ? response
-                : profile
-          )
-
+      setProfiles((current) =>
+        current.map(
+          (profile) =>
+            profile.id === profileId
+              ? updatedProfile
+              : profile
+        )
       );
-
 
       setSuccess(
-        "GitHub profile statistics updated successfully."
+        "Profile refreshed successfully."
       );
 
-
     } catch (err) {
-
       setError(
-
         err instanceof Error
           ? err.message
           : "Failed to refresh profile."
-
       );
-
     } finally {
+      setRefreshingId(null);
+    }
+  }
 
-      setRefreshingId(
-        null
+
+  // ==================================================
+  // DELETE PROFILE
+  // ==================================================
+
+  async function handleDelete(
+    profileId: string
+  ) {
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to disconnect this profile?"
       );
 
+    if (!confirmed) {
+      return;
     }
 
+    try {
+      setError("");
+      setSuccess("");
+
+      setDeletingId(profileId);
+
+      await deleteExternalProfile(
+        profileId
+      );
+
+      setProfiles((current) =>
+        current.filter(
+          (profile) =>
+            profile.id !== profileId
+        )
+      );
+
+      setSuccess(
+        "Profile disconnected successfully."
+      );
+
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to disconnect profile."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+
+  // ==================================================
+  // HELPERS
+  // ==================================================
+
+  function formatDate(
+    value: string | null
+  ) {
+    if (!value) {
+      return "Not verified yet";
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return value;
+    }
+
+    return date.toLocaleString();
   }
 
 
   function getPlatformName(
-    platformValue: string
+    value: string
   ) {
+    switch (
+      value.toLowerCase()
+    ) {
+      case "leetcode":
+        return "LeetCode";
 
-    const item =
-      platforms.find(
-        (item) =>
-          item.value ===
-          platformValue
-      );
+      case "github":
+        return "GitHub";
 
+      case "codechef":
+        return "CodeChef";
 
-    return (
-      item?.name ||
-      platformValue
-    );
+      case "hackerrank":
+        return "HackerRank";
 
+      default:
+        return value;
+    }
   }
 
 
-  const connectedPlatforms =
-    new Set(
+  function getVerificationLabel(
+    status: string
+  ) {
+    switch (
+      status.toUpperCase()
+    ) {
+      case "VERIFIED":
+        return "Verified";
 
-      profiles.map(
-        (profile) =>
-          profile.platform
-      )
+      case "PENDING":
+        return "Pending";
 
-    );
+      default:
+        return status;
+    }
+  }
 
+
+  // ==================================================
+  // UI
+  // ==================================================
 
   return (
-
     <div className="min-h-screen bg-slate-50">
 
-      <div className="mx-auto max-w-5xl px-6 py-8">
+      {/* HEADER */}
 
+      <header className="border-b border-slate-200 bg-white">
 
-        {/* Header */}
-
-        <div>
+        <div className="mx-auto max-w-6xl px-6 py-8">
 
           <p className="text-sm font-medium text-slate-500">
-            Placement Profile
+            Student Portal
           </p>
 
           <h1 className="mt-1 text-2xl font-semibold text-slate-900">
             Connected Profiles
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-
-            Connect your coding and professional
-            profiles so your placement progress
-            can be tracked in one place.
-
+          <p className="mt-2 max-w-2xl text-sm text-slate-500">
+            Connect your coding and professional profiles
+            so your placement readiness information can be
+            reviewed in one place.
           </p>
 
         </div>
 
+      </header>
 
-        {/* Error */}
+
+      {/* MAIN */}
+
+      <main className="mx-auto max-w-6xl px-6 py-8">
+
+        {/* ERROR */}
 
         {error && (
-
-          <div className="mt-6 border border-red-200 bg-red-50 px-4 py-3">
+          <div className="mb-6 border border-red-200 bg-red-50 px-4 py-3">
 
             <p className="text-sm font-medium text-red-700">
               {error}
             </p>
 
           </div>
-
         )}
 
 
-        {/* Success */}
+        {/* SUCCESS */}
 
         {success && (
-
-          <div className="mt-6 border border-green-200 bg-green-50 px-4 py-3">
+          <div className="mb-6 border border-green-200 bg-green-50 px-4 py-3">
 
             <p className="text-sm font-medium text-green-700">
               {success}
             </p>
 
           </div>
-
         )}
 
 
-        {/* Connect Profile */}
+        {/* CONNECT PROFILE */}
 
-        <section className="mt-8 border border-slate-200 bg-white">
-
+        <section className="border border-slate-200 bg-white">
 
           <div className="border-b border-slate-200 px-6 py-5">
 
             <div className="flex items-center gap-3">
 
-              <div className="flex h-10 w-10 items-center justify-center bg-slate-100">
+              <div className="flex h-10 w-10 items-center justify-center bg-slate-900 text-white">
 
-                <Link2
-                  size={20}
-                  className="text-slate-700"
-                />
+                <Link2 size={19} />
 
               </div>
-
 
               <div>
 
@@ -391,7 +407,7 @@ export default function ConnectedProfiles() {
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Enter the public profile URL.
+                  Connect your external coding profiles.
                 </p>
 
               </div>
@@ -401,57 +417,64 @@ export default function ConnectedProfiles() {
           </div>
 
 
-          <form
-            onSubmit={handleConnect}
-            className="p-6"
-          >
+          <div className="p-6">
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <form
+              onSubmit={handleConnect}
+              className="space-y-4"
+            >
 
+              {/* PLATFORM */}
 
               <div>
 
-                <label className="block text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="platform"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
                   Platform
                 </label>
 
-
                 <select
+                  id="platform"
                   value={platform}
                   onChange={(event) =>
                     setPlatform(
                       event.target.value
                     )
                   }
-                  className="mt-2 w-full border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900"
+                  className="w-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900"
                 >
 
-                  {platforms.map(
-                    (item) => (
+                  <option value="leetcode">
+                    LeetCode
+                  </option>
 
-                      <option
-                        key={item.value}
-                        value={item.value}
-                      >
-                        {item.name}
-                      </option>
-
-                    )
-                  )}
+                  <option value="github">
+                    GitHub
+                  </option>
 
                 </select>
 
               </div>
 
 
-              <div className="md:col-span-2">
+              {/* PROFILE URL */}
 
-                <label className="block text-sm font-medium text-slate-700">
+              <div>
+
+                <label
+                  htmlFor="profile-url"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  {getPlatformName(
+                    platform
+                  )}{" "}
                   Profile URL
                 </label>
 
-
                 <input
+                  id="profile-url"
                   type="url"
                   value={profileUrl}
                   onChange={(event) =>
@@ -460,495 +483,751 @@ export default function ConnectedProfiles() {
                     )
                   }
                   placeholder={
-                    platforms.find(
-                      (item) =>
-                        item.value ===
-                        platform
-                    )?.placeholder
+                    platform === "github"
+                      ? "https://github.com/your-username"
+                      : "https://leetcode.com/u/your-username/"
                   }
-                  className="mt-2 w-full border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900"
+                  className="w-full border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-900"
                 />
 
               </div>
 
-            </div>
 
-
-            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-              <p className="text-xs text-slate-500">
-
-                GitHub statistics can be
-                refreshed automatically.
-
-              </p>
-
+              {/* CONNECT BUTTON */}
 
               <button
                 type="submit"
                 disabled={connecting}
-                className="flex items-center justify-center gap-2 bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
 
-                {connecting && (
+                {connecting ? (
+                  <>
+                    <RefreshCw
+                      size={16}
+                      className="animate-spin"
+                    />
 
-                  <RefreshCw
-                    size={16}
-                    className="animate-spin"
-                  />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Link2 size={16} />
 
+                    Connect{" "}
+                    {getPlatformName(
+                      platform
+                    )}
+                  </>
                 )}
-
-
-                {connecting
-                  ? "Connecting..."
-                  : "Connect Profile"}
 
               </button>
 
-            </div>
+            </form>
 
-          </form>
+          </div>
 
         </section>
 
 
-        {/* Profiles */}
+        {/* CONNECTED PROFILES */}
 
-        <section className="mt-8 border border-slate-200 bg-white">
+        <section className="mt-8">
 
-
-          <div className="border-b border-slate-200 px-6 py-5">
+          <div className="mb-4">
 
             <h2 className="text-lg font-semibold text-slate-900">
               Your Connected Profiles
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Profiles currently connected to your placement account.
+
+              {profiles.length} connected profile
+              {profiles.length === 1
+                ? ""
+                : "s"}
+
             </p>
 
           </div>
 
 
-          {loading && (
+          {/* LOADING */}
 
-            <div className="px-6 py-12 text-center">
+          {loading ? (
 
-              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
+            <div className="border border-slate-200 bg-white p-10 text-center">
+
+              <RefreshCw
+                size={24}
+                className="mx-auto animate-spin text-slate-500"
+              />
 
               <p className="mt-4 text-sm text-slate-500">
-                Loading profiles...
+                Loading connected profiles...
               </p>
+
+            </div>
+
+          ) : profiles.length === 0 ? (
+
+            /* EMPTY */
+
+            <div className="border border-dashed border-slate-300 bg-white p-10 text-center">
+
+              <Link2
+                size={30}
+                className="mx-auto text-slate-400"
+              />
+
+              <h3 className="mt-4 text-base font-semibold text-slate-900">
+                No profiles connected
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+                Connect your LeetCode or GitHub
+                profile above to display your
+                real profile statistics.
+              </p>
+
+            </div>
+
+          ) : (
+
+            /* PROFILE LIST */
+
+            <div className="space-y-6">
+
+              {profiles.map(
+                (profile) => (
+
+                  <ProfileCard
+                    key={profile.id}
+                    profile={profile}
+                    refreshing={
+                      refreshingId ===
+                      profile.id
+                    }
+                    deleting={
+                      deletingId ===
+                      profile.id
+                    }
+                    onRefresh={() =>
+                      handleRefresh(
+                        profile.id
+                      )
+                    }
+                    onDelete={() =>
+                      handleDelete(
+                        profile.id
+                      )
+                    }
+                    platformName={
+                      getPlatformName(
+                        profile.platform
+                      )
+                    }
+                    verificationLabel={
+                      getVerificationLabel(
+                        profile.verification_status
+                      )
+                    }
+                    formattedDate={
+                      formatDate(
+                        profile.last_verified_at
+                      )
+                    }
+                  />
+
+                )
+              )}
 
             </div>
 
           )}
 
+        </section>
 
-          {!loading &&
-            profiles.length === 0 && (
 
-              <div className="px-6 py-12 text-center">
+        {/* INFORMATION */}
 
-                <Code2
-                  size={32}
-                  className="mx-auto text-slate-300"
-                />
+        <section className="mt-8 border border-slate-200 bg-white p-6">
 
-                <p className="mt-4 text-sm font-medium text-slate-700">
-                  No profiles connected yet.
+          <h2 className="text-base font-semibold text-slate-900">
+            How profile data is used
+          </h2>
+
+          <div className="mt-4 space-y-3 text-sm text-slate-600">
+
+            <p>
+              • Your public profile information is fetched
+              from the connected platform.
+            </p>
+
+            <p>
+              • The system stores the latest available
+              statistics for placement-readiness tracking.
+            </p>
+
+            <p>
+              • Mentors can view your connected profiles
+              from your student profile.
+            </p>
+
+            <p>
+              • You can refresh your profile whenever you
+              want to retrieve the latest available data.
+            </p>
+
+          </div>
+
+        </section>
+
+      </main>
+
+    </div>
+  );
+}
+
+
+// =====================================================
+// PROFILE CARD
+// =====================================================
+
+function ProfileCard({
+  profile,
+  refreshing,
+  deleting,
+  onRefresh,
+  onDelete,
+  platformName,
+  verificationLabel,
+  formattedDate,
+}: {
+  profile: ExternalProfile;
+
+  refreshing: boolean;
+
+  deleting: boolean;
+
+  onRefresh: () => void;
+
+  onDelete: () => void;
+
+  platformName: string;
+
+  verificationLabel: string;
+
+  formattedDate: string;
+}) {
+
+  const stats =
+    profile.stats || {};
+
+
+  const isLeetCode =
+    profile.platform.toLowerCase() ===
+    "leetcode";
+
+
+  const isGitHub =
+    profile.platform.toLowerCase() ===
+    "github";
+
+
+  return (
+    <article className="border border-slate-200 bg-white">
+
+      {/* PROFILE HEADER */}
+
+      <div className="border-b border-slate-200 px-6 py-5">
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+
+          <div className="flex items-start gap-4">
+
+            <div className="flex h-12 w-12 items-center justify-center bg-slate-900 text-white">
+
+              <Link2 size={22} />
+
+            </div>
+
+
+            <div>
+
+              <div className="flex flex-wrap items-center gap-2">
+
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {platformName}
+                </h3>
+
+
+                <span
+                  className={
+                    profile.verification_status.toUpperCase() ===
+                    "VERIFIED"
+                      ? "border border-green-200 bg-green-50 px-2 py-1 text-xs font-medium text-green-700"
+                      : "border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                  }
+                >
+                  {verificationLabel}
+                </span>
+
+              </div>
+
+
+              <p className="mt-1 text-sm text-slate-500">
+                @{profile.username}
+              </p>
+
+
+              <a
+                href={profile.profile_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-slate-700 underline"
+              >
+
+                Open profile
+
+                <ExternalLink size={14} />
+
+              </a>
+
+            </div>
+
+          </div>
+
+
+          {/* ACTIONS */}
+
+          <div className="flex flex-wrap gap-2">
+
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={
+                refreshing ||
+                deleting
+              }
+              className="inline-flex items-center gap-2 border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+
+              <RefreshCw
+                size={15}
+                className={
+                  refreshing
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+
+              {refreshing
+                ? "Refreshing..."
+                : "Refresh"}
+
+            </button>
+
+
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={
+                refreshing ||
+                deleting
+              }
+              className="inline-flex items-center gap-2 border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+
+              <Trash2 size={15} />
+
+              {deleting
+                ? "Removing..."
+                : "Disconnect"}
+
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* ================================ */}
+      {/* LEETCODE STATISTICS              */}
+      {/* ================================ */}
+
+      {isLeetCode && (
+
+        <div className="p-6">
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+
+            <StatItem
+              label="Problems Solved"
+              value={
+                Number(
+                  stats.problems_solved ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Easy"
+              value={
+                Number(
+                  stats.easy ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Medium"
+              value={
+                Number(
+                  stats.medium ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Hard"
+              value={
+                Number(
+                  stats.hard ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Contest Rating"
+              value={
+                stats.contest_rating != null
+                  ? String(
+                      stats.contest_rating
+                    )
+                  : "—"
+              }
+            />
+
+            <StatItem
+              label="Contests"
+              value={
+                stats.contests_attended != null
+                  ? String(
+                      stats.contests_attended
+                    )
+                  : "—"
+              }
+            />
+
+            <StatItem
+              label="Global Ranking"
+              value={
+                stats.global_ranking != null
+                  ? Number(
+                      stats.global_ranking
+                    ).toLocaleString()
+                  : "—"
+              }
+            />
+
+            <StatItem
+              label="Reputation"
+              value={
+                stats.reputation != null
+                  ? String(
+                      stats.reputation
+                    )
+                  : "—"
+              }
+            />
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* ================================ */}
+      {/* GITHUB STATISTICS                */}
+      {/* ================================ */}
+
+      {isGitHub && (
+
+        <div className="p-6">
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+
+            <StatItem
+              label="Repositories"
+              value={
+                Number(
+                  stats.public_repositories ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Followers"
+              value={
+                Number(
+                  stats.followers ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Following"
+              value={
+                Number(
+                  stats.following ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Public Gists"
+              value={
+                Number(
+                  stats.public_gists ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Total Stars"
+              value={
+                Number(
+                  stats.total_stars ?? 0
+                )
+              }
+            />
+
+            <StatItem
+              label="Total Forks"
+              value={
+                Number(
+                  stats.total_forks ?? 0
+                )
+              }
+            />
+
+          </div>
+
+
+          {/* LANGUAGES */}
+
+          {Array.isArray(
+            stats.languages
+          ) &&
+            stats.languages.length > 0 && (
+
+              <div className="mt-6">
+
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Languages
                 </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+
+                  {stats.languages.map(
+                    (language) => (
+
+                      <span
+                        key={String(
+                          language
+                        )}
+                        className="border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700"
+                      >
+                        {String(
+                          language
+                        )}
+                      </span>
+
+                    )
+                  )}
+
+                </div>
 
               </div>
 
             )}
 
 
-          {!loading &&
-            profiles.length > 0 && (
+          {/* RECENT REPOSITORIES */}
 
-              <div className="divide-y divide-slate-100">
+          {Array.isArray(
+            stats.repositories
+          ) &&
+            stats.repositories.length > 0 && (
 
-                {profiles.map(
-                  (profile) => (
+              <div className="mt-6">
 
-                    <div
-                      key={profile.id}
-                      className="px-6 py-6"
-                    >
-
-
-                      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Recent Public Repositories
+                </p>
 
 
-                        <div className="flex items-center gap-4">
+                <div className="mt-3 space-y-3">
 
-                          <div className="flex h-11 w-11 items-center justify-center bg-slate-100">
+                  {stats.repositories
+                    .slice(0, 5)
+                    .map(
+                      (
+                        repository: any
+                      ) => (
 
-                            <Code2
-                              size={21}
-                              className="text-slate-700"
-                            />
+                        <div
+                          key={
+                            String(
+                              repository.name
+                            )
+                          }
+                          className="border border-slate-200 p-4"
+                        >
 
-                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+
+                            <div className="min-w-0">
+
+                              <p className="font-medium text-slate-900">
+                                {String(
+                                  repository.name
+                                )}
+                              </p>
 
 
-                          <div>
+                              {repository.description && (
 
-                            <p className="text-sm font-semibold text-slate-900">
+                                <p className="mt-1 text-sm text-slate-500">
+                                  {String(
+                                    repository.description
+                                  )}
+                                </p>
 
-                              {getPlatformName(
-                                profile.platform
                               )}
 
-                            </p>
-
-                            <p className="mt-1 text-sm text-slate-500">
-
-                              @{profile.username}
-
-                            </p>
-
-                          </div>
-
-                        </div>
+                            </div>
 
 
-                        <div className="flex flex-wrap items-center gap-4">
+                            {repository.html_url && (
 
+                              <a
+                                href={String(
+                                  repository.html_url
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-slate-700 underline"
+                              >
 
-                          <div className="flex items-center gap-2">
+                                Open
 
-                            {profile.verification_status ===
-                            "VERIFIED" ? (
+                                <ExternalLink
+                                  size={14}
+                                />
 
-                              <CheckCircle2
-                                size={17}
-                                className="text-green-600"
-                              />
-
-                            ) : (
-
-                              <span className="h-2 w-2 rounded-full bg-amber-500" />
+                              </a>
 
                             )}
 
+                          </div>
 
-                            <span className="text-sm font-medium text-slate-700">
 
-                              {profile.verification_status ===
-                              "VERIFIED"
-                                ? "Verified"
-                                : "Pending verification"}
+                          <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
 
+                            {repository.language && (
+                              <span>
+                                Language:{" "}
+                                {String(
+                                  repository.language
+                                )}
+                              </span>
+                            )}
+
+                            <span>
+                              Stars:{" "}
+                              {Number(
+                                repository.stars ?? 0
+                              )}
+                            </span>
+
+                            <span>
+                              Forks:{" "}
+                              {Number(
+                                repository.forks ?? 0
+                              )}
                             </span>
 
                           </div>
 
-
-                          {profile.platform ===
-                            "github" && (
-
-                            <button
-                              onClick={() =>
-                                handleRefresh(
-                                  profile.id
-                                )
-                              }
-                              disabled={
-                                refreshingId ===
-                                profile.id
-                              }
-                              className="flex items-center gap-2 border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                            >
-
-                              <RefreshCw
-                                size={15}
-                                className={
-                                  refreshingId ===
-                                  profile.id
-                                    ? "animate-spin"
-                                    : ""
-                                }
-                              />
-
-                              {refreshingId ===
-                              profile.id
-                                ? "Refreshing..."
-                                : "Refresh"}
-
-                            </button>
-
-                          )}
-
-
-                          <a
-                            href={
-                              profile.profile_url
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
-                          >
-
-                            View
-
-                            <ExternalLink
-                              size={15}
-                            />
-
-                          </a>
-
                         </div>
 
-                      </div>
+                      )
+                    )}
 
-
-                      {/* GitHub Statistics */}
-
-                      {profile.platform ===
-                        "github" &&
-                        Object.keys(
-                          profile.stats
-                        ).length > 0 && (
-
-                        <div className="mt-6 border-t border-slate-100 pt-5">
-
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            GitHub Statistics
-                          </p>
-
-
-                          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-
-
-                            <Stat
-                              label="Repositories"
-                              value={
-                                String(
-                                  profile.stats[
-                                    "public_repositories"
-                                  ] ?? 0
-                                )
-                              }
-                            />
-
-
-                            <Stat
-                              label="Stars"
-                              value={
-                                String(
-                                  profile.stats[
-                                    "total_stars"
-                                  ] ?? 0
-                                )
-                              }
-                            />
-
-
-                            <Stat
-                              label="Forks"
-                              value={
-                                String(
-                                  profile.stats[
-                                    "total_forks"
-                                  ] ?? 0
-                                )
-                              }
-                            />
-
-
-                            <Stat
-                              label="Followers"
-                              value={
-                                String(
-                                  profile.stats[
-                                    "followers"
-                                  ] ?? 0
-                                )
-                              }
-                            />
-
-
-                          </div>
-
-
-                          {Array.isArray(
-                            profile.stats[
-                              "languages"
-                            ]
-                          ) &&
-                            (
-                              profile.stats[
-                                "languages"
-                              ] as string[]
-                            ).length > 0 && (
-
-                              <div className="mt-5">
-
-                                <p className="text-xs font-medium text-slate-500">
-                                  Languages
-                                </p>
-
-                                <div className="mt-2 flex flex-wrap gap-2">
-
-                                  {(
-                                    profile.stats[
-                                      "languages"
-                                    ] as string[]
-                                  ).map(
-                                    (language) => (
-
-                                      <span
-                                        key={language}
-                                        className="border border-slate-300 px-2.5 py-1 text-xs text-slate-700"
-                                      >
-                                        {language}
-                                      </span>
-
-                                    )
-                                  )}
-
-                                </div>
-
-                              </div>
-
-                            )}
-
-
-                          {profile.last_verified_at && (
-
-                            <p className="mt-5 text-xs text-slate-500">
-
-                              Last updated:{" "}
-
-                              {new Date(
-                                profile.last_verified_at
-                              ).toLocaleString()}
-
-                            </p>
-
-                          )}
-
-                        </div>
-
-                      )}
-
-                    </div>
-
-                  )
-                )}
+                </div>
 
               </div>
 
             )}
 
-        </section>
+        </div>
+
+      )}
 
 
-        {/* Platform status */}
+      {/* LAST REFRESHED */}
 
-        <section className="mt-8 border border-slate-200 bg-white">
+      <div className="px-6 pb-6">
 
+        <div className="border-t border-slate-100 pt-4">
 
-          <div className="border-b border-slate-200 px-6 py-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Last refreshed
+          </p>
 
-            <h2 className="text-lg font-semibold text-slate-900">
-              Profile Status
-            </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {formattedDate}
+          </p>
 
-          </div>
-
-
-          <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-
-            {platforms.map(
-              (item) => {
-
-                const connected =
-                  connectedPlatforms.has(
-                    item.value
-                  );
-
-
-                return (
-
-                  <div
-                    key={item.value}
-                    className="flex items-center justify-between px-6 py-5"
-                  >
-
-                    <div>
-
-                      <p className="text-sm font-medium text-slate-900">
-                        {item.name}
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-500">
-                        {item.description}
-                      </p>
-
-                    </div>
-
-
-                    <span
-                      className={
-                        connected
-                          ? "text-xs font-medium text-green-700"
-                          : "text-xs font-medium text-slate-400"
-                      }
-                    >
-
-                      {connected
-                        ? "Connected"
-                        : "Not connected"}
-
-                    </span>
-
-                  </div>
-
-                );
-
-              }
-            )}
-
-          </div>
-
-        </section>
-
+        </div>
 
       </div>
 
-    </div>
-
+    </article>
   );
-
 }
 
 
-function Stat({
+// =====================================================
+// STAT ITEM
+// =====================================================
+
+function StatItem({
   label,
   value,
 }: {
   label: string;
-  value: string;
+  value: number | string;
 }) {
 
   return (
 
     <div className="border border-slate-200 p-4">
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
         {label}
       </p>
 
-      <p className="mt-1 text-xl font-semibold text-slate-900">
+      <p className="mt-2 text-xl font-semibold text-slate-900">
         {value}
       </p>
 
     </div>
 
   );
-
 }

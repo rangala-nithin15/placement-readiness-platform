@@ -1,8 +1,5 @@
 import { apiRequest } from "./api";
-
-import {
-  getToken,
-} from "./authStorage";
+import { getToken } from "./authStorage";
 
 
 export type ExternalProfile = {
@@ -46,8 +43,7 @@ export type ConnectProfileRequest = {
 
 function getAuthHeaders() {
 
-  const token =
-    getToken();
+  const token = getToken();
 
   if (!token) {
 
@@ -58,10 +54,7 @@ function getAuthHeaders() {
   }
 
   return {
-
-    Authorization:
-      `Bearer ${token}`,
-
+    Authorization: `Bearer ${token}`,
   };
 
 }
@@ -69,21 +62,12 @@ function getAuthHeaders() {
 
 export async function getExternalProfiles() {
 
-  return apiRequest<
-    ExternalProfileListResponse
-  >(
-
+  return apiRequest<ExternalProfileListResponse>(
     "/student/profiles",
-
     {
-
       method: "GET",
-
-      headers:
-        getAuthHeaders(),
-
+      headers: getAuthHeaders(),
     }
-
   );
 
 }
@@ -93,24 +77,13 @@ export async function connectExternalProfile(
   data: ConnectProfileRequest
 ) {
 
-  return apiRequest<
-    ExternalProfile
-  >(
-
+  return apiRequest<ExternalProfile>(
     "/student/profiles",
-
     {
-
       method: "POST",
-
-      headers:
-        getAuthHeaders(),
-
-      body:
-        JSON.stringify(data),
-
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
     }
-
   );
 
 }
@@ -120,21 +93,29 @@ export async function refreshExternalProfile(
   profileId: string
 ) {
 
-  return apiRequest<
-    ExternalProfile
-  >(
-
+  return apiRequest<ExternalProfile>(
     `/student/profiles/${profileId}/refresh`,
-
     {
-
       method: "POST",
-
-      headers:
-        getAuthHeaders(),
-
+      headers: getAuthHeaders(),
     }
+  );
 
+}
+
+
+export async function deleteExternalProfile(
+  profileId: string
+) {
+
+  return apiRequest<{
+    message: string;
+  }>(
+    `/student/profiles/${profileId}`,
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    }
   );
 
 }

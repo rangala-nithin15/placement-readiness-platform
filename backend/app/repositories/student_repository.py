@@ -147,3 +147,24 @@ def create_student_profile_index():
         "user_id",
         unique=True,
     )
+def create_student_profile_indexes():
+    collection = get_student_profiles_collection()
+
+    collection.create_index(
+        [("user_id", 1)],
+        unique=True,
+    )
+
+    collection.create_index(
+        [("register_number", 1)],
+        unique=True,
+        sparse=True,
+    )
+
+    collection.create_index(
+        [("department", 1), ("batch", 1)],
+    )
+
+    collection.create_index(
+        [("batch", 1)],
+    )    

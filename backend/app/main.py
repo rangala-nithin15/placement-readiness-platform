@@ -1,9 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database.mongodb import (
-    close_mongodb_connection,
-    connect_to_mongodb,
+from app.database.mongodb import mongodb
+
+from app.api import (
+    auth,
+    student,
+    mentor,
+    external_profiles,
+    placement,
+    verification,
 )
 
 from app.repositories.user_repository import (
@@ -11,7 +17,7 @@ from app.repositories.user_repository import (
 )
 
 from app.repositories.student_repository import (
-    create_student_profile_index,
+    create_student_profile_indexes,
 )
 
 from app.repositories.mentor_repository import (
@@ -22,12 +28,14 @@ from app.repositories.external_profile_repository import (
     create_external_profile_indexes,
 )
 
-from app.api import auth
-from app.api import student
-from app.api import mentor
-from app.api import external_profiles
-from app.api import placement
+from app.repositories.verification_repository import (
+    create_verification_indexes,
+)
 
+
+# ============================================================
+# APPLICATION
+# ============================================================
 
 app = FastAPI(
     title="Placement Readiness API",
@@ -39,73 +47,71 @@ app = FastAPI(
 )
 
 
+# ============================================================
+# CORS
+# ============================================================
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=(
-        r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
-    ),
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=[
-        "*"
+        "*",
     ],
     allow_headers=[
-        "*"
+        "*",
     ],
 )
 
 
+# ============================================================
+# STARTUP
+# ============================================================
+
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
 
-    print("")
-    print("========================================")
-    print("Starting Placement Readiness API")
-    print("========================================")
-    print("")
+    # --------------------------------------------------------
+    # Connect to MongoDB
+    # --------------------------------------------------------
 
-    # ----------------------------------------
-    # CONNECT TO MONGODB
-    # ----------------------------------------
+    mongodb.connect()
 
-    connect_to_mongodb()
-
-    # ----------------------------------------
-    # CREATE DATABASE INDEXES
-    # ----------------------------------------
-
-    print("")
-    print("Creating database indexes...")
+    # --------------------------------------------------------
+    # Create required indexes
+    # --------------------------------------------------------
 
     create_user_indexes()
 
-    create_student_profile_index()
+    create_student_profile_indexes()
 
     create_mentor_assignment_indexes()
 
     create_external_profile_indexes()
 
-    print("Database indexes created.")
+    create_verification_indexes()
 
-    print("")
-    print("Placement Readiness API started.")
-    print("")
 
+# ============================================================
+# SHUTDOWN
+# ============================================================
 
 @app.on_event("shutdown")
-async def shutdown_event():
+def shutdown_event():
 
-    print("")
-    print("Shutting down Placement Readiness API...")
-
-    close_mongodb_connection()
-
-    print("Placement Readiness API stopped.")
-    print("")
+    mongodb.close()
 
 
-# ----------------------------------------
-# AUTHENTICATION
-# ----------------------------------------
+# ============================================================
+# API ROUTES
+# ============================================================
+
+# ------------------------------------------------------------
+# Authentication
+# ------------------------------------------------------------
 
 app.include_router(
     auth.router,
@@ -113,9 +119,9 @@ app.include_router(
 )
 
 
-# ----------------------------------------
-# STUDENT
-# ----------------------------------------
+# ------------------------------------------------------------
+# Student
+# ------------------------------------------------------------
 
 app.include_router(
     student.router,
@@ -123,9 +129,9 @@ app.include_router(
 )
 
 
-# ----------------------------------------
-# MENTOR
-# ----------------------------------------
+# ------------------------------------------------------------
+# Mentor
+# ------------------------------------------------------------
 
 app.include_router(
     mentor.router,
@@ -133,9 +139,9 @@ app.include_router(
 )
 
 
-# ----------------------------------------
-# EXTERNAL PROFILES
-# ----------------------------------------
+# ------------------------------------------------------------
+# External Profiles
+# ------------------------------------------------------------
 
 app.include_router(
     external_profiles.router,
@@ -143,9 +149,9 @@ app.include_router(
 )
 
 
-# ----------------------------------------
-# PLACEMENT
-# ----------------------------------------
+# ------------------------------------------------------------
+# Placement
+# ------------------------------------------------------------
 
 app.include_router(
     placement.router,
@@ -153,29 +159,37 @@ app.include_router(
 )
 
 
-# ----------------------------------------
+# ------------------------------------------------------------
+# Verification
+# ------------------------------------------------------------
+
+app.include_router(
+    verification.router,
+    prefix="/api",
+)
+
+
+# ============================================================
 # ROOT
-# ----------------------------------------
+# ============================================================
 
 @app.get("/")
 def root():
 
     return {
-        "message": (
-            "Placement Readiness API is running."
-        ),
-        "version": "1.0.0",
+        "message": "Placement Readiness API is running.",
+        "status": "ok",
     }
 
 
-# ----------------------------------------
+# ============================================================
 # HEALTH CHECK
-# ----------------------------------------
+# ============================================================
 
 @app.get("/api/health")
 def health_check():
 
     return {
-        "status": "ok",
-        "service": "Placement Readiness API",
+        "status": "healthy",
+        "service": "placement-readiness-api",
     }

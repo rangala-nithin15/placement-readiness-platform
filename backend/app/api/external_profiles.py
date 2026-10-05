@@ -1,6 +1,8 @@
-from urllib.parse import urlparse
+from datetime import datetime
+from typing import Dict, Any
 
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 
 from fastapi import (
     APIRouter,
@@ -9,11 +11,9 @@ from fastapi import (
     status,
 )
 
-from pymongo.errors import (
-    DuplicateKeyError,
-)
+from pydantic import BaseModel
 
-from app.core.security import require_role
+from app.core.security import get_current_user
 
 from app.repositories.external_profile_repository import (
     create_external_profile,
@@ -21,19 +21,20 @@ from app.repositories.external_profile_repository import (
     find_profile_by_student_and_platform,
     get_external_profile_by_id,
     get_student_external_profiles,
-    normalize_platform,
-    normalize_profile_url,
     update_external_profile_stats,
+    delete_external_profile,
 )
 
-from app.schemas.external_profile import (
-    ConnectProfileRequest,
-    ExternalProfileListResponse,
-    ExternalProfileResponse,
+from app.services.leetcode_service import (
+    extract_leetcode_username,
+    normalize_leetcode_url,
+    fetch_leetcode_profile,
 )
 
 from app.services.github_service import (
-    fetch_github_statistics,
+    extract_github_username,
+    normalize_github_url,
+    fetch_github_profile,
 )
 
 
@@ -43,208 +44,158 @@ router = APIRouter(
 )
 
 
-SUPPORTED_PLATFORMS = {
+class ConnectProfileRequest(BaseModel):
 
-    "leetcode": [
-        "leetcode.com",
-        "www.leetcode.com",
-    ],
+    platform: str
 
-    "github": [
-        "github.com",
-        "www.github.com",
-    ],
-
-    "codechef": [
-        "codechef.com",
-        "www.codechef.com",
-    ],
-
-    "hackerrank": [
-        "hackerrank.com",
-        "www.hackerrank.com",
-    ],
-
-}
+    profile_url: str
 
 
-def extract_username_from_url(
-    platform: str,
-    profile_url: str,
-) -> str:
+def serialize_value(
+    value: Any,
+) -> Any:
 
-    parsed = urlparse(
-        profile_url
-    )
+    if isinstance(
+        value,
+        ObjectId,
+    ):
 
-    hostname = (
-        parsed.netloc
-        .lower()
-        .split(":")[0]
-    )
+        return str(value)
 
-    allowed_hosts = (
-        SUPPORTED_PLATFORMS[
-            platform
+    if isinstance(
+        value,
+        datetime,
+    ):
+
+        return value.isoformat()
+
+    if isinstance(
+        value,
+        dict,
+    ):
+
+        return {
+            key: serialize_value(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(
+        value,
+        list,
+    ):
+
+        return [
+            serialize_value(item)
+            for item in value
         ]
-    )
 
-    if hostname not in allowed_hosts:
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Invalid {platform} "
-                "profile URL."
-            ),
-        )
-
-    path_parts = [
-
-        part
-
-        for part in parsed.path.split("/")
-
-        if part
-
-    ]
-
-    if not path_parts:
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Profile username "
-                "could not be found."
-            ),
-        )
-
-    username = path_parts[0].strip()
-
-    if not username:
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Profile username "
-                "could not be found."
-            ),
-        )
-
-    return username
+    return value
 
 
-def profile_to_response(
+def profile_response(
     profile: dict,
-) -> ExternalProfileResponse:
+) -> dict:
 
-    last_verified_at = profile.get(
-        "last_verified_at"
+    return serialize_value(
+        profile
     )
 
-    if last_verified_at is not None:
 
-        last_verified_at = (
-            last_verified_at.isoformat()
-        )
+@router.get("")
+def get_my_profiles(
+    current_user: dict = Depends(
+        get_current_user
+    ),
+):
 
-    return ExternalProfileResponse(
-
-        id=str(
-            profile["_id"]
-        ),
-
-        student_id=str(
-            profile["student_id"]
-        ),
-
-        platform=profile[
-            "platform"
-        ],
-
-        username=profile[
-            "username"
-        ],
-
-        profile_url=profile[
-            "profile_url"
-        ],
-
-        verification_status=profile.get(
-            "verification_status",
-            "PENDING",
-        ),
-
-        stats=profile.get(
-            "stats",
-            {},
-        ),
-
-        last_verified_at=
-            last_verified_at,
-
+    profiles = get_student_external_profiles(
+        current_user["_id"]
     )
+
+    return {
+        "profiles": [
+            profile_response(profile)
+            for profile in profiles
+        ],
+        "total": len(profiles),
+    }
 
 
 @router.post(
     "",
-    response_model=ExternalProfileResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def connect_profile(
     request: ConnectProfileRequest,
-
     current_user: dict = Depends(
-        require_role("STUDENT")
+        get_current_user
     ),
 ):
 
-    platform = normalize_platform(
+    platform = (
         request.platform
+        .strip()
+        .lower()
     )
 
-    if platform not in SUPPORTED_PLATFORMS:
+    profile_url = (
+        request.profile_url
+        .strip()
+    )
+
+    supported_platforms = {
+        "leetcode",
+        "github",
+    }
+
+    if platform not in supported_platforms:
 
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail=(
                 "Unsupported platform. "
-                "Supported platforms are "
-                "LeetCode, GitHub, CodeChef "
-                "and HackerRank."
+                "Currently supported: "
+                "LeetCode and GitHub."
             ),
         )
 
-
-    profile_url = normalize_profile_url(
-        request.profile_url
-    )
-
-
-    if (
-        not profile_url.startswith(
-            "https://"
-        )
-        and
-        not profile_url.startswith(
-            "http://"
-        )
-    ):
+    if not profile_url:
 
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Profile URL must start "
-                "with http:// or https://."
-            ),
+            status_code=400,
+            detail="Profile URL is required.",
         )
 
+    # ------------------------------------------
+    # EXTRACT USERNAME
+    # ------------------------------------------
 
-    username = extract_username_from_url(
-        platform,
-        profile_url,
-    )
+    try:
 
+        if platform == "leetcode":
+
+            username = extract_leetcode_username(
+                profile_url
+            )
+
+        else:
+
+            username = extract_github_username(
+                profile_url
+            )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+    username = username.strip().lower()
+
+    # ------------------------------------------
+    # CHECK STUDENT PLATFORM DUPLICATE
+    # ------------------------------------------
 
     existing_student_profile = (
         find_profile_by_student_and_platform(
@@ -253,131 +204,288 @@ def connect_profile(
         )
     )
 
+    if existing_student_profile:
 
-    if existing_student_profile is not None:
+        platform_name = (
+            "LeetCode"
+            if platform == "leetcode"
+            else "GitHub"
+        )
 
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=409,
             detail=(
                 f"You already have a "
-                f"{platform} profile connected."
+                f"{platform_name} profile connected."
             ),
         )
 
+    # ------------------------------------------
+    # CHECK GLOBAL PROFILE OWNERSHIP
+    # ------------------------------------------
 
-    existing_external_profile = (
+    existing_owner = (
         find_profile_by_platform_and_username(
             platform,
             username,
         )
     )
 
-
-    if existing_external_profile is not None:
+    if existing_owner:
 
         if (
-            existing_external_profile[
+            existing_owner.get(
                 "student_id"
-            ]
-            == current_user["_id"]
+            )
+            != current_user["_id"]
         ):
 
+            platform_name = (
+                "LeetCode"
+                if platform == "leetcode"
+                else "GitHub"
+            )
+
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=409,
                 detail=(
-                    "This profile is already "
-                    "connected to your account."
+                    f"This {platform_name} profile "
+                    "is already connected to "
+                    "another student."
                 ),
             )
 
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=409,
             detail=(
-                "This external profile is "
-                "already connected to another "
-                "student account."
+                "This profile is already connected."
             ),
         )
 
+    # ------------------------------------------
+    # FETCH REAL PLATFORM DATA
+    # ------------------------------------------
+
+    try:
+
+        if platform == "leetcode":
+
+            platform_data = (
+                fetch_leetcode_profile(
+                    username
+                )
+            )
+
+        else:
+
+            platform_data = (
+                fetch_github_profile(
+                    username
+                )
+            )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
+
+    except RuntimeError as error:
+
+        raise HTTPException(
+            status_code=502,
+            detail=str(error),
+        )
+
+    # ------------------------------------------
+    # CANONICAL URL
+    # ------------------------------------------
+
+    if platform == "leetcode":
+
+        canonical_url = (
+            normalize_leetcode_url(
+                username
+            )
+        )
+
+    else:
+
+        canonical_url = (
+            normalize_github_url(
+                username
+            )
+        )
+
+    # ------------------------------------------
+    # CREATE PROFILE
+    # ------------------------------------------
 
     try:
 
         profile = create_external_profile(
-
-            student_id=current_user[
-                "_id"
-            ],
-
+            student_id=current_user["_id"],
             platform=platform,
-
             username=username,
-
-            profile_url=profile_url,
-
+            profile_url=canonical_url,
         )
 
     except DuplicateKeyError:
 
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=409,
             detail=(
                 "This external profile "
                 "is already connected."
             ),
         )
 
+    # ------------------------------------------
+    # STORE REAL STATS
+    # ------------------------------------------
 
-    return profile_to_response(
-        profile
+    updated = update_external_profile_stats(
+        current_user["_id"],
+        profile["_id"],
+        platform_data["stats"],
     )
 
+    # ------------------------------------------
+    # RETURN PROFILE
+    # ------------------------------------------
 
-@router.get(
-    "",
-    response_model=ExternalProfileListResponse,
-)
-def get_my_profiles(
-    current_user: dict = Depends(
-        require_role("STUDENT")
-    ),
-):
-
-    profiles = (
-        get_student_external_profiles(
-            current_user["_id"]
-        )
-    )
-
-    responses = [
-
-        profile_to_response(
-            profile
-        )
-
-        for profile in profiles
-
-    ]
-
-    return ExternalProfileListResponse(
-
-        profiles=responses,
-
-        total=len(
-            responses
-        ),
-
+    return profile_response(
+        updated
     )
 
 
 @router.post(
-    "/{profile_id}/refresh",
-    response_model=ExternalProfileResponse,
+    "/{profile_id}/refresh"
 )
 def refresh_profile(
     profile_id: str,
-
     current_user: dict = Depends(
-        require_role("STUDENT")
+        get_current_user
+    ),
+):
+
+    # ------------------------------------------
+    # VALIDATE OBJECT ID
+    # ------------------------------------------
+
+    try:
+
+        object_id = ObjectId(
+            profile_id
+        )
+
+    except Exception:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid profile ID.",
+        )
+
+    # ------------------------------------------
+    # GET PROFILE
+    # ------------------------------------------
+
+    profile = get_external_profile_by_id(
+        current_user["_id"],
+        object_id,
+    )
+
+    if profile is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="External profile not found.",
+        )
+
+    platform = profile.get(
+        "platform"
+    )
+
+    username = profile.get(
+        "username"
+    )
+
+    # ------------------------------------------
+    # FETCH LATEST DATA
+    # ------------------------------------------
+
+    try:
+
+        if platform == "leetcode":
+
+            platform_data = (
+                fetch_leetcode_profile(
+                    username
+                )
+            )
+
+        elif platform == "github":
+
+            platform_data = (
+                fetch_github_profile(
+                    username
+                )
+            )
+
+        else:
+
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Refresh is not supported "
+                    "for this platform."
+                ),
+            )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
+
+    except RuntimeError as error:
+
+        raise HTTPException(
+            status_code=502,
+            detail=str(error),
+        )
+
+    # ------------------------------------------
+    # UPDATE STORED STATS
+    # ------------------------------------------
+
+    updated = update_external_profile_stats(
+        current_user["_id"],
+        object_id,
+        platform_data["stats"],
+    )
+
+    if updated is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="External profile not found.",
+        )
+
+    return profile_response(
+        updated
+    )
+
+
+@router.delete(
+    "/{profile_id}"
+)
+def delete_profile(
+    profile_id: str,
+    current_user: dict = Depends(
+        get_current_user
     ),
 ):
 
@@ -390,96 +498,24 @@ def refresh_profile(
     except Exception:
 
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Invalid profile ID.",
         )
 
-
-    profile = get_external_profile_by_id(
-
-        student_id=current_user["_id"],
-
-        profile_id=object_id,
-
+    deleted = delete_external_profile(
+        current_user["_id"],
+        object_id,
     )
 
-
-    if profile is None:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found.",
-        )
-
-
-    platform = profile[
-        "platform"
-    ]
-
-    username = profile[
-        "username"
-    ]
-
-
-    if platform != "github":
+    if not deleted:
 
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Automatic statistics "
-                "are currently available "
-                "only for GitHub."
-            ),
+            status_code=404,
+            detail="External profile not found.",
         )
 
-
-    try:
-
-        stats = fetch_github_statistics(
-            username
+    return {
+        "message": (
+            "External profile removed."
         )
-
-    except ValueError as error:
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error),
-        )
-
-    except Exception:
-
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=(
-                "Unable to communicate "
-                "with GitHub."
-            ),
-        )
-
-
-    updated_profile = (
-        update_external_profile_stats(
-
-            student_id=current_user[
-                "_id"
-            ],
-
-            profile_id=object_id,
-
-            stats=stats,
-
-        )
-    )
-
-
-    if updated_profile is None:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found.",
-        )
-
-
-    return profile_to_response(
-        updated_profile
-    )
+    }
