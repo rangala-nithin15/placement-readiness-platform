@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
+  ClipboardList,
+  Link2,
+  ShieldCheck,
   Target,
+  UserCheck,
 } from "lucide-react";
 
 import {
@@ -300,6 +305,55 @@ export default function StudentDashboard() {
 
         </div>
 
+      </div>
+
+
+      {/* QUICK ACTIONS & SHORTCUTS */}
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <Link
+          to="/student/profiles"
+          className="rounded-2xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-800/80"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
+            <Link2 size={20} />
+          </div>
+          <p className="mt-3 font-semibold text-white text-sm">Profiles</p>
+          <p className="mt-1 text-xs text-slate-400">LeetCode & GitHub</p>
+        </Link>
+
+        <Link
+          to="/student/tasks"
+          className="rounded-2xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-800/80"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+            <ClipboardList size={20} />
+          </div>
+          <p className="mt-3 font-semibold text-white text-sm">Tasks</p>
+          <p className="mt-1 text-xs text-slate-400">Mentor assignments</p>
+        </Link>
+
+        <Link
+          to="/student/verification"
+          className="rounded-2xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-800/80"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+            <ShieldCheck size={20} />
+          </div>
+          <p className="mt-3 font-semibold text-white text-sm">Verifications</p>
+          <p className="mt-1 text-xs text-slate-400">Review requests</p>
+        </Link>
+
+        <Link
+          to="/student/profile"
+          className="rounded-2xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-800/80"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+            <UserCheck size={20} />
+          </div>
+          <p className="mt-3 font-semibold text-white text-sm">My Profile</p>
+          <p className="mt-1 text-xs text-slate-400">CGPA & skills</p>
+        </Link>
       </div>
 
 

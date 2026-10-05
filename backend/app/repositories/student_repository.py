@@ -19,6 +19,20 @@ def get_students_collection():
 get_student_profiles_collection = get_students_collection
 
 
+def compute_profile_completion(profile: dict) -> int:
+    fields = [
+        "name", "email", "register_number", "department", "batch",
+        "phone", "location", "linkedin_url", "cgpa",
+        "tenth_percentage", "twelfth_percentage", "skills", "career_interests"
+    ]
+    completed = 0
+    for f in fields:
+        val = profile.get(f)
+        if val is not None and val != "" and val != []:
+            completed += 1
+    return int((completed / len(fields)) * 100)
+
+
 def create_student_profile(
     user: dict,
 ) -> dict:
@@ -65,6 +79,7 @@ def create_student_profile(
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
+    profile["profile_completion"] = compute_profile_completion(profile)
 
     result = collection.insert_one(
         profile
@@ -92,6 +107,11 @@ def update_student_profile(
     update_data: dict,
 ) -> Optional[dict]:
     collection = get_students_collection()
+
+    existing = collection.find_one({"user_id": user_id})
+    if existing:
+        merged = {**existing, **update_data}
+        update_data["profile_completion"] = compute_profile_completion(merged)
 
     update_data["updated_at"] = (
         datetime.utcnow()
