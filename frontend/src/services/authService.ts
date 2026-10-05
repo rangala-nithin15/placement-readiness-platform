@@ -6,6 +6,7 @@ export type User = {
   email: string;
   role: string;
   register_number?: string;
+  mentor_id?: string;
   department?: string;
   batch?: string;
 };

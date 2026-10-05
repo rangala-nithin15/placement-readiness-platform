@@ -86,39 +86,43 @@ def serialize_value(
 def student_to_response(
     student: dict,
 ) -> MentorStudentResponse:
+    student_user_id = student.get("user_id") or student["_id"]
+    level = "LEVEL 1"
+    score = 0
+    try:
+        placement = calculate_student_placement(student_user_id)
+        score = int(placement.get("total_score", 0))
+        level = placement.get("current_level", "LEVEL 1")
+    except Exception:
+        pass
 
     return MentorStudentResponse(
-
         id=str(
             student["_id"]
         ),
-
         name=student.get(
             "name",
             "",
         ),
-
         email=student.get(
             "email",
             "",
         ),
-
         register_number=student.get(
             "register_number"
         ),
-
         department=student.get(
             "department"
         ),
-
         batch=student.get(
             "batch"
         ),
-
         profile_completion=student.get(
             "profile_completion",
             0,
         ),
+        level=level,
+        placement_score=score,
     )
 
 
@@ -231,9 +235,11 @@ def get_my_student_profile(
     # GET CONNECTED EXTERNAL PROFILES
     # ----------------------------------------------
 
+    student_user_id = student.get("user_id") or student["_id"]
+
     external_profiles = (
         get_student_external_profiles(
-            student_object_id
+            student_user_id
         )
     )
 
@@ -245,7 +251,7 @@ def get_my_student_profile(
 
         placement = (
             calculate_student_placement(
-                student_object_id
+                student_user_id
             )
         )
 

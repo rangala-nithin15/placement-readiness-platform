@@ -53,6 +53,9 @@ import MentorDashboard
 import MentorStudentProfile
   from "../pages/mentor/MentorStudentProfile";
 
+import MentorLayout
+  from "../layouts/MentorLayout";
+
 import AdminDashboard
   from "../pages/admin/AdminDashboard";
 
@@ -206,16 +209,23 @@ export default function AppRoutes() {
         <Route
           path="/mentor"
           element={
-            <MentorDashboard />
+            <MentorLayout />
           }
-        />
+        >
+          <Route
+            index
+            element={
+              <MentorDashboard />
+            }
+          />
 
-        <Route
-          path="/mentor/students/:studentId"
-          element={
-            <MentorStudentProfile />
-          }
-        />
+          <Route
+            path="students/:studentId"
+            element={
+              <MentorStudentProfile />
+            }
+          />
+        </Route>
 
       </Route>
 

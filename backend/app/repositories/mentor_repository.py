@@ -53,12 +53,14 @@ def get_mentor_by_email(
 def get_student_by_id(
     student_id,
 ) -> Optional[dict]:
-
     collection = get_students_collection()
 
     return collection.find_one(
         {
-            "_id": student_id
+            "$or": [
+                {"_id": student_id},
+                {"user_id": student_id},
+            ]
         }
     )
 
@@ -67,7 +69,6 @@ def create_assignment(
     mentor_id,
     student_id,
 ) -> dict:
-
     collection = get_assignments_collection()
 
     existing = collection.find_one(
@@ -99,7 +100,6 @@ def create_assignment(
 def get_mentor_students(
     mentor_id,
 ) -> List[dict]:
-
     assignments_collection = (
         get_assignments_collection()
     )
@@ -128,9 +128,10 @@ def get_mentor_students(
     return list(
         students_collection.find(
             {
-                "_id": {
-                    "$in": student_ids
-                }
+                "$or": [
+                    {"_id": {"$in": student_ids}},
+                    {"user_id": {"$in": student_ids}},
+                ]
             }
         ).sort(
             "name",
@@ -143,7 +144,6 @@ def get_assigned_student(
     mentor_id,
     student_id,
 ) -> Optional[dict]:
-
     assignments_collection = (
         get_assignments_collection()
     )
@@ -152,11 +152,27 @@ def get_assigned_student(
         get_students_collection()
     )
 
+    student = students_collection.find_one(
+        {
+            "$or": [
+                {"_id": student_id},
+                {"user_id": student_id},
+            ]
+        }
+    )
+    if student is None:
+        return None
+
     assignment = (
         assignments_collection.find_one(
             {
                 "mentor_id": mentor_id,
-                "student_id": student_id,
+                "student_id": {
+                    "$in": [
+                        student.get("user_id"),
+                        student.get("_id"),
+                    ]
+                },
                 "is_active": True,
             }
         )
@@ -165,11 +181,7 @@ def get_assigned_student(
     if assignment is None:
         return None
 
-    return students_collection.find_one(
-        {
-            "_id": student_id
-        }
-    )
+    return student
 
 
 def create_mentor_assignment_indexes():
