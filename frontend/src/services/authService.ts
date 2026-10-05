@@ -45,6 +45,29 @@ export async function login(
 }
 
 
+export type MentorRegisterRequest = {
+  name: string;
+  email: string;
+  password: string;
+  department: string;
+  batch: string;
+  mentor_id?: string;
+};
+
+
+export async function registerMentor(
+  data: MentorRegisterRequest
+): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>(
+    "/auth/register-mentor",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+
 export async function registerStudent(
   data: RegisterRequest
 ): Promise<AuthResponse> {

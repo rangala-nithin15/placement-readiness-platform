@@ -10,10 +10,12 @@ from app.api import (
     external_profiles,
     placement,
     verification,
+    admin,
 )
 
 from app.repositories.user_repository import (
     create_user_indexes,
+    ensure_admin_user,
 )
 
 from app.repositories.student_repository import (
@@ -94,6 +96,8 @@ def startup_event():
 
     create_verification_indexes()
 
+    ensure_admin_user()
+
 
 # ============================================================
 # SHUTDOWN
@@ -135,6 +139,16 @@ app.include_router(
 
 app.include_router(
     mentor.router,
+    prefix="/api",
+)
+
+
+# ------------------------------------------------------------
+# Admin
+# ------------------------------------------------------------
+
+app.include_router(
+    admin.router,
     prefix="/api",
 )
 

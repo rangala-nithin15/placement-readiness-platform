@@ -121,11 +121,14 @@ def create_student_profile_indexes():
         unique=True,
     )
 
-    collection.create_index(
-        [("register_number", 1)],
-        unique=True,
-        sparse=True,
-    )
+    try:
+        collection.create_index(
+            [("register_number", 1)],
+            unique=True,
+            partialFilterExpression={"register_number": {"$type": "string"}},
+        )
+    except Exception:
+        pass
 
     collection.create_index(
         [("department", 1), ("batch", 1)],

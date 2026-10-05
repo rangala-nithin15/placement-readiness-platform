@@ -1,6 +1,5 @@
 from typing import Optional
-
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class StudentRegisterRequest(BaseModel):
@@ -10,6 +9,22 @@ class StudentRegisterRequest(BaseModel):
     register_number: str
     department: str
     batch: str
+
+
+class MentorRegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    department: str
+    batch: str
+    mentor_id: Optional[str] = None
+
+
+class AdminRegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    department: Optional[str] = "ADMIN"
 
 
 class LoginRequest(BaseModel):
@@ -23,8 +38,11 @@ class UserResponse(BaseModel):
     email: str
     role: str
     register_number: Optional[str] = None
+    mentor_id: Optional[str] = None
     department: Optional[str] = None
     batch: Optional[str] = None
+    is_active: bool = True
+    is_approved: bool = True
 
 
 class AuthResponse(BaseModel):

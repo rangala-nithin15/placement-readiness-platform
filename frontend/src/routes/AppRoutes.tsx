@@ -53,6 +53,9 @@ import MentorDashboard
 import MentorStudentProfile
   from "../pages/mentor/MentorStudentProfile";
 
+import AdminDashboard
+  from "../pages/admin/AdminDashboard";
+
 
 import ProtectedRoute
   from "./ProtectedRoute";
@@ -232,9 +235,7 @@ export default function AppRoutes() {
         <Route
           path="/admin"
           element={
-            <div>
-              Admin Dashboard
-            </div>
+            <AdminDashboard />
           }
         />
 
