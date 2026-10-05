@@ -11,6 +11,8 @@ from app.api import (
     placement,
     verification,
     admin,
+    tasks,
+    notifications,
 )
 
 from app.repositories.user_repository import (
@@ -32,6 +34,14 @@ from app.repositories.external_profile_repository import (
 
 from app.repositories.verification_repository import (
     create_verification_indexes,
+)
+
+from app.repositories.task_repository import (
+    create_task_indexes,
+)
+
+from app.repositories.notification_repository import (
+    create_notification_indexes,
 )
 
 
@@ -95,6 +105,10 @@ def startup_event():
     create_external_profile_indexes()
 
     create_verification_indexes()
+
+    create_task_indexes()
+
+    create_notification_indexes()
 
     ensure_admin_user()
 
@@ -179,6 +193,26 @@ app.include_router(
 
 app.include_router(
     verification.router,
+    prefix="/api",
+)
+
+
+# ------------------------------------------------------------
+# Tasks
+# ------------------------------------------------------------
+
+app.include_router(
+    tasks.router,
+    prefix="/api",
+)
+
+
+# ------------------------------------------------------------
+# Notifications
+# ------------------------------------------------------------
+
+app.include_router(
+    notifications.router,
     prefix="/api",
 )
 

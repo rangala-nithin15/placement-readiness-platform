@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+from bson import ObjectId
 
 from app.database.mongodb import mongodb
 
@@ -54,12 +55,20 @@ def get_student_by_id(
     student_id,
 ) -> Optional[dict]:
     collection = get_students_collection()
+    s_ids = [student_id]
+    if isinstance(student_id, str):
+        try:
+            s_ids.append(ObjectId(student_id))
+        except Exception:
+            pass
+    elif isinstance(student_id, ObjectId):
+        s_ids.append(str(student_id))
 
     return collection.find_one(
         {
             "$or": [
-                {"_id": student_id},
-                {"user_id": student_id},
+                {"_id": {"$in": s_ids}},
+                {"user_id": {"$in": s_ids}},
             ]
         }
     )
@@ -144,38 +153,50 @@ def get_assigned_student(
     mentor_id,
     student_id,
 ) -> Optional[dict]:
-    assignments_collection = (
-        get_assignments_collection()
-    )
+    assignments_collection = get_assignments_collection()
+    students_collection = get_students_collection()
 
-    students_collection = (
-        get_students_collection()
-    )
+    s_ids = [student_id]
+    if isinstance(student_id, str):
+        try:
+            s_ids.append(ObjectId(student_id))
+        except Exception:
+            pass
+    elif isinstance(student_id, ObjectId):
+        s_ids.append(str(student_id))
 
     student = students_collection.find_one(
         {
             "$or": [
-                {"_id": student_id},
-                {"user_id": student_id},
+                {"_id": {"$in": s_ids}},
+                {"user_id": {"$in": s_ids}},
             ]
         }
     )
     if student is None:
         return None
 
-    assignment = (
-        assignments_collection.find_one(
-            {
-                "mentor_id": mentor_id,
-                "student_id": {
-                    "$in": [
-                        student.get("user_id"),
-                        student.get("_id"),
-                    ]
-                },
-                "is_active": True,
-            }
-        )
+    m_ids = [mentor_id]
+    if isinstance(mentor_id, str):
+        try:
+            m_ids.append(ObjectId(mentor_id))
+        except Exception:
+            pass
+    elif isinstance(mentor_id, ObjectId):
+        m_ids.append(str(mentor_id))
+
+    target_student_ids = []
+    if student.get("user_id"):
+        target_student_ids.extend([student["user_id"], str(student["user_id"])])
+    if student.get("_id"):
+        target_student_ids.extend([student["_id"], str(student["_id"])])
+
+    assignment = assignments_collection.find_one(
+        {
+            "mentor_id": {"$in": m_ids},
+            "student_id": {"$in": target_student_ids},
+            "is_active": True,
+        }
     )
 
     if assignment is None:

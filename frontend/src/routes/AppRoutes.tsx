@@ -56,6 +56,9 @@ import MentorStudentProfile
 import MentorVerification
   from "../pages/mentor/MentorVerification";
 
+import MentorTasks
+  from "../pages/mentor/MentorTasks";
+
 import MentorLayout
   from "../layouts/MentorLayout";
 
@@ -226,6 +229,13 @@ export default function AppRoutes() {
             path="verifications"
             element={
               <MentorVerification />
+            }
+          />
+
+          <Route
+            path="tasks"
+            element={
+              <MentorTasks />
             }
           />
 
